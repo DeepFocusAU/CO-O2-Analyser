@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CO-O2 Analyser</title>
+<meta name="description" content="A low-cost DIY analyser that measures oxygen and carbon monoxide in diving gas at the same time, built around an ESP32-C3.">
+<style>
+:root {
+  --bg: #f6f8fa; --card: #ffffff; --text: #1b2430; --muted: #5b6676;
+  --accent: #0a7ea4; --border: #d8dee6; --warn-bg: #fff4e5; --warn-border: #e8a33d; --warn-text: #5a3b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1520; --card: #162130; --text: #e6edf3; --muted: #9aa7b6;
+    --accent: #4cc2e8; --border: #2a3a4f; --warn-bg: #2e2312; --warn-border: #b37a22; --warn-text: #f4d9a8;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1520; --card: #162130; --text: #e6edf3; --muted: #9aa7b6;
+  --accent: #4cc2e8; --border: #2a3a4f; --warn-bg: #2e2312; --warn-border: #b37a22; --warn-text: #f4d9a8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; margin: 0 0 12px; }
+h2 { font-size: 1.3rem; margin: 40px 0 12px; }
+p.lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 20px; }
+a { color: var(--accent); }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+.btn.alt { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.hero { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); }
+.warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); border-radius: 10px; padding: 14px 18px; margin: 24px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.card h3 { margin: 0 0 6px; font-size: 1rem; }
+.card p { margin: 0; color: var(--muted); font-size: .95rem; }
+table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+code, pre { font-family: ui-monospace, Consolas, monospace; font-size: .9em; }
+pre { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; overflow-x: auto; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.photo { margin: 0; }
+.photo img { display: block; width: 100%; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); background: var(--card); }
+.photo figcaption { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+.table-wrap { overflow-x: auto; }
+footer { margin-top: 48px; color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Carbon Monoxide Oxygen Analyser</h1>
+  <p class="lead">A low-cost DIY analyser that measures oxygen and carbon monoxide in diving gas at the same time, built around an ESP32-C3.</p>
+  <div class="btns">
+    <a class="btn" href="https://github.com/DeepFocusAU/CO-O2-Analyser">View the code on GitHub</a>
+    <a class="btn alt" href="https://damiensiviero.com/carbon-monoxide-oxygen-analyser/">Read the original write-up</a>
+  </div>
+
+  <img class="hero" src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/feature3-scaled.jpg?w=1400&ssl=1" alt="The finished analyser: a 128 by 128 OLED showing O2 percent, cell millivolts, CO ppm and temperature, above illuminated power and calibration buttons.">
+
+  <div class="warn"><strong>Warning:</strong> this is a cheap, poorly tested DIY build with rough code, not a commercial product. The CO sensor's maker states it must not be used for life support. Think about what your life is worth before you rely on one.</div>
+
+  <h2>Why</h2>
+  <p>CO analysers sold for diving cost far more than comparable industrial safety analysers. So I built a dual analyser that tests a gas for O2 and CO in one go. The O2 side reuses a standard R22D oxygen cell that came out of my CCR after 12 months, which still has plenty of life left.</p>
+
+  <h2>What it does</h2>
+  <div class="grid">
+    <div class="card"><h3>O2 and CO together</h3><p>One sample, both readings: O2 % and CO ppm in large type, with the O2 cell's millivolts and the CO sensor's temperature.</p></div>
+    <div class="card"><h3>Steady O2 reading</h3><p>The O2 cell is read through a 16-bit ADC and averaged over 40 samples.</p></div>
+    <div class="card"><h3>One-button calibration</h3><p>Calibrate on air or pure oxygen; the analyser works out which from the cell's output and remembers it.</p></div>
+    <div class="card"><h3>Factory-calibrated CO</h3><p>Electrochemical CO sensor: 0–1000&nbsp;ppm at 1&nbsp;ppm resolution, expected life over 2 years.</p></div>
+    <div class="card"><h3>Rechargeable</h3><p>Runs on an 18650 cell, charged through a USB-C socket on the case.</p></div>
+    <div class="card"><h3>Simple wiring</h3><p>The display, ADC and CO sensor all share one I2C bus.</p></div>
+  </div>
+
+  <h2>Calibration</h2>
+  <p>Press <strong>CAL</strong> while the O2 cell is exposed to the calibration gas. The firmware decides which gas it is from the cell's output:</p>
+  <div class="table-wrap"><table>
+    <tr><th>Cell output</th><th>Treated as</th><th>Calibration value</th></tr>
+    <tr><td>7–13&nbsp;mV</td><td>Air</td><td>20.7% O2</td></tr>
+    <tr><td>Above 44&nbsp;mV</td><td>Oxygen</td><td>98% O2</td></tr>
+    <tr><td>Anything else</td><td>Error</td><td>Shows <code>CAL ERROR</code> and stops until restarted</td></tr>
+  </table></div>
+  <p>The calibration is saved to flash and loaded at start-up. On the very first start, the analyser calibrates straight away.</p>
+
+  <h2>Photos</h2>
+  <div class="gallery">
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122459848_iOS-scaled.jpg?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122459848_iOS-scaled.jpg?w=800&ssl=1" alt="The analyser inside its open Pelican-style case, with coiled sample tubing beside the panel." loading="lazy"></a>
+      <figcaption>Inside the Pelican-style case.</figcaption>
+    </figure>
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/feature-scaled.jpg?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/feature-scaled.jpg?w=800&ssl=1" alt="The panel with the OLED readout above the POWER and CAL buttons." loading="lazy"></a>
+      <figcaption>The OLED readout with the POWER and CAL buttons.</figcaption>
+    </figure>
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250625_012731676_iOS-scaled.jpg?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250625_012731676_iOS-scaled.jpg?w=800&ssl=1" alt="The start-up screen listing serial, display, CO cell and O2 cell as OK, then Setup complete." loading="lazy"></a>
+      <figcaption>Start-up check of each part.</figcaption>
+    </figure>
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122505820_iOS-scaled.jpg?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122505820_iOS-scaled.jpg?w=800&ssl=1" alt="Sample tubing stowed in the case next to the panel and its USB-C charging socket." loading="lazy"></a>
+      <figcaption>Sample tubing stows in the lid; USB-C socket for charging.</figcaption>
+    </figure>
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122511412_iOS-scaled.jpg?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122511412_iOS-scaled.jpg?w=800&ssl=1" alt="The closed grey Pelican-style case." loading="lazy"></a>
+      <figcaption>Packed away.</figcaption>
+    </figure>
+    <figure class="photo">
+      <a href="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/3D-Printed-Insert.png?w=1600&ssl=1"><img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/3D-Printed-Insert.png?w=800&ssl=1" alt="Render of the 3D-printed internal assembly that holds the parts in the case." loading="lazy"></a>
+      <figcaption>The 3D-printed internal assembly.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Parts</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Part</th><th>Notes</th></tr>
+    <tr><td>ESP32-C3 Super Mini</td><td>Microcontroller</td></tr>
+    <tr><td>DFRobot CO sensor (SEN0466)</td><td>I2C, address 0x74. Factory calibrated, 0–1000&nbsp;ppm, 1&nbsp;ppm resolution, expected life over 2 years</td></tr>
+    <tr><td>R22D oxygen cell</td><td>Reclaimed from a CCR; connected with a Molex connector</td></tr>
+    <tr><td>ADS1115 16-bit ADC</td><td>I2C; reads the O2 cell differentially on A0–A1</td></tr>
+    <tr><td>1.5" 128×128 OLED</td><td>SH1107 driver, I2C</td></tr>
+    <tr><td>18650 battery holder / UPS module</td><td>With an 18650 cell</td></tr>
+    <tr><td>USB-C socket</td><td>For charging</td></tr>
+    <tr><td>M16 toggle switch</td><td>Power</td></tr>
+    <tr><td>M16 momentary switch</td><td>Calibration</td></tr>
+    <tr><td>Pelican-style case</td><td>Cheap, but surprisingly decent</td></tr>
+    <tr><td>3D-printed internal assembly</td><td>Holds everything in the case; M4 threaded inserts</td></tr>
+    <tr><td>Stainless barbs, 4&nbsp;×&nbsp;M6</td><td>Gas sample connections</td></tr>
+  </table></div>
+
+  <h2>Wiring</h2>
+  <div class="table-wrap"><table>
+    <tr><th>ESP32-C3 pin</th><th>Connects to</th></tr>
+    <tr><td>GPIO8 (SDA)</td><td>SDA on the OLED, ADS1115 and CO sensor</td></tr>
+    <tr><td>GPIO9 (SCL)</td><td>SCL on the OLED, ADS1115 and CO sensor</td></tr>
+    <tr><td>GPIO2</td><td>Calibration button to GND (internal pull-up)</td></tr>
+    <tr><td>ADS1115 A0 / A1</td><td>O2 cell + / −</td></tr>
+  </table></div>
+
+  <h2>Build and flash</h2>
+  <p>The firmware is a basic Arduino-framework C++ program, written in VS Code with <a href="https://platformio.org/">PlatformIO</a>. It should port to other IDEs.</p>
+  <pre>pio run -t upload
+pio device monitor</pre>
+  <p>Libraries: U8g2, Adafruit ADS1X15, RunningAverage and EasyButton, installed by PlatformIO. The DFRobot multi-gas sensor library (MIT licence) is included in <code>src</code>.</p>
+  <p>3D-print files (STL and Fusion 360): <a href="https://damiensiviero.com/wp-content/uploads/2025/06/3D-Printed-Assembly.zip">3D-Printed-Assembly.zip</a></p>
+
+  <h2>Known limitations</h2>
+  <ul>
+    <li>The code could do with some optimisation.</li>
+    <li>It's lightly tested. Check it against a known gas before trusting a reading.</li>
+    <li>CO temperature compensation is turned off in the firmware.</li>
+  </ul>
+
+  <footer>Carbon Monoxide Oxygen Analyser · <a href="https://github.com/DeepFocusAU/CO-O2-Analyser">Source on GitHub</a> · <a href="https://damiensiviero.com/carbon-monoxide-oxygen-analyser/">Original write-up</a></footer>
+</main>
+</body>
+</html>
