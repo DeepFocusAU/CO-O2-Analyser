@@ -5,7 +5,7 @@ A low-cost DIY analyser that measures oxygen (O2) and carbon monoxide (CO) in di
 Project page: https://deepfocusau.github.io/CO-O2-Analyser/
 Original write-up: [Carbon Monoxide Oxygen Analyser](https://damiensiviero.com/carbon-monoxide-oxygen-analyser/) on damiensiviero.com
 
-![The finished analyser: OLED showing O2 % and CO ppm, with power and calibration buttons](https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/feature3-scaled.jpg?w=1200&ssl=1)
+![The finished analyser: OLED showing O2 % and CO ppm, with power and calibration buttons](docs/images/hero.jpg)
 
 > **Warning:** this is a cheap, poorly tested DIY build with rough code, not a commercial product. The CO sensor's maker states it must not be used for life support. Think about what your life is worth before you rely on one.
 
@@ -63,9 +63,9 @@ The display, ADC and CO sensor all share the I2C bus, so the wiring is simple.
 
 ## Photos
 
-<img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250624_122459848_iOS-scaled.jpg?w=800&ssl=1" alt="The analyser inside its open case, with coiled sample tubing" width="400"> <img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/20250625_012731676_iOS-scaled.jpg?w=800&ssl=1" alt="Start-up screen listing each part as OK, then Setup complete" width="400">
+<img src="docs/images/in-case.jpg" alt="The analyser inside its open case, with coiled sample tubing" width="400"> <img src="docs/images/startup.jpg" alt="Start-up screen listing each part as OK, then Setup complete" width="400">
 
-<img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/feature-scaled.jpg?w=800&ssl=1" alt="Panel with the OLED readout above the POWER and CAL buttons" width="400"> <img src="https://i0.wp.com/damiensiviero.com/wp-content/uploads/2025/06/3D-Printed-Insert.png?w=800&ssl=1" alt="Render of the 3D-printed internal assembly" width="400">
+<img src="docs/images/panel.jpg" alt="Panel with the OLED readout above the POWER and CAL buttons" width="400"> <img src="docs/images/insert-render.png" alt="Render of the 3D-printed internal assembly" width="400">
 
 ## Building
 
